@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// 1. EL USUARIO (El Corredor)
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String?
+  createdAt     DateTime   @default(now())
+  
+  shoes         Shoe[]
+  activities    Activity[]
+}
+
+// 2. EL CALZADO (La Herramienta)
+model Shoe {
+  id            String     @id @default(cuid())
+  brand         String     // Nike, Adidas...
+  model         String     // Vaporfly, Ultraboost...
+  totalDistance Float      @default(0)
+  maxDistance   Float      @default(800)
+  isActive      Boolean    @default(true)
+  currentStatus String     @default("HEALTHY") // HEALTHY, WARNING, RETIRED
+  
+  userId        String
+  user          User       @relation(fields: [userId], references: [id])
+  activities    Activity[]
+}
+
+// 3. LA ACTIVIDAD (El Entrenamiento)
+model Activity {
+  id           String   @id @default(cuid())
+  distance     Float    
+  duration     Int      
+  pace         Float    
+  createdAt    DateTime @default(now())
+
+  shoeId       String
+  shoe         Shoe     @relation(fields: [shoeId], references: [id])
+  
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+}

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { Activity, Footprints, TrendingUp, Zap, Calendar, Clock } from 'lucide-react';
+import { Activity, Footprints, TrendingUp, Zap, Calendar, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { revalidatePath } from 'next/cache';
 
 export default async function DashboardPage() {
   
@@ -29,6 +30,29 @@ export default async function DashboardPage() {
   const shoeHealth = mainShoe 
     ? Math.round(100 - (mainShoe.totalDistance / mainShoe.maxDistance * 100)) 
     : 0;
+
+  async function deleteActivity(formData: FormData) {
+    'use server';
+    const activityId = formData.get('activityId') as string;
+    const shoeId = formData.get('shoeId') as string;
+    const distance = parseFloat(formData.get('distance') as string);
+
+    // 1. Restar los KM a la zapatilla (Devolverle la vida)
+    const shoe = await prisma.shoe.findUnique({ where: { id: shoeId } });
+    if (shoe) {
+        await prisma.shoe.update({
+            where: { id: shoeId },
+            data: { totalDistance: Math.max(0, shoe.totalDistance - distance) }
+        });
+    }
+
+    // 2. Borrar la actividad
+    await prisma.activity.delete({ where: { id: activityId } });
+
+    // 3. Recargar la pantalla
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/garage'); // También actualizamos el garage
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8 font-sans">

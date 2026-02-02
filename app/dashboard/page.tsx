@@ -11,61 +11,66 @@ export default async function DashboardPage() {
     orderBy: { brand: 'asc' }
   });
   
-  // 2. DATOS DE ACTIVIDAD (Traemos las últimas 5 con los datos del zapato)
+  // 2. DATOS DE ACTIVIDAD
   const activities = await prisma.activity.findMany({
     orderBy: { createdAt: 'desc' },
     take: 5,
     include: {
-      shoe: true // ¡Truco! Esto trae la marca y modelo del zapato asociado
+      shoe: true 
     }
   });
-  // ... (tus consultas anteriores de shoes y activities) ...
 
-  // 1. Buscar la carrera más larga (Mayor Distancia)
+  // 3. DATOS DE RÉCORDS
+  // Buscar la carrera más larga (Mayor Distancia)
   const longestRun = await prisma.activity.findFirst({
-    orderBy: { distance: 'desc' }, // Ordenar de mayor a menor
+    orderBy: { distance: 'desc' }, 
     take: 1
   });
 
-  // 2. Buscar la carrera más rápida (Menor Ritmo, pero mayor a 0 para evitar errores)
+  // Buscar la carrera más rápida (Menor Ritmo)
   const fastestRun = await prisma.activity.findFirst({
-    where: { pace: { gt: 0 } }, // Pace mayor a 0
-    orderBy: { pace: 'asc' },   // Ordenar de menor a mayor (menos minutos es más rápido)
+    where: { pace: { gt: 0 } }, 
+    orderBy: { pace: 'asc' },   
     take: 1
   });
 
-  // 3. CÁLCULOS
+  // 4. CÁLCULOS
   const mainShoe = shoes[0]; 
   const totalUserDistance = await prisma.activity.aggregate({
     _sum: { distance: true }
   });
   
   const kmRecorridos = totalUserDistance._sum.distance || 0;
-  const shoeHealth = mainShoe 
+  
+  // Calculo seguro de salud (evitamos división por cero si maxDistance es raro)
+  const shoeHealth = mainShoe && mainShoe.maxDistance > 0
     ? Math.round(100 - (mainShoe.totalDistance / mainShoe.maxDistance * 100)) 
     : 0;
 
+  // 5. SERVER ACTION: BORRAR ACTIVIDAD
   async function deleteActivity(formData: FormData) {
     'use server';
     const activityId = formData.get('activityId') as string;
     const shoeId = formData.get('shoeId') as string;
     const distance = parseFloat(formData.get('distance') as string);
 
-    // 1. Restar los KM a la zapatilla (Devolverle la vida)
-    const shoe = await prisma.shoe.findUnique({ where: { id: shoeId } });
-    if (shoe) {
-        await prisma.shoe.update({
-            where: { id: shoeId },
-            data: { totalDistance: Math.max(0, shoe.totalDistance - distance) }
-        });
+    // 1. Restar los KM a la zapatilla (Si la zapatilla aun existe)
+    if (shoeId) {
+        const shoe = await prisma.shoe.findUnique({ where: { id: shoeId } });
+        if (shoe) {
+            await prisma.shoe.update({
+                where: { id: shoeId },
+                data: { totalDistance: Math.max(0, shoe.totalDistance - distance) }
+            });
+        }
     }
 
     // 2. Borrar la actividad
     await prisma.activity.delete({ where: { id: activityId } });
 
-    // 3. Recargar la pantalla
+    // 3. Recargar pantallas
     revalidatePath('/dashboard');
-    revalidatePath('/dashboard/garage'); // También actualizamos el garage
+    revalidatePath('/dashboard/garage');
   }
 
   return (
@@ -111,10 +116,10 @@ export default async function DashboardPage() {
                   <span className={shoeHealth < 20 ? "text-red-500" : "text-emerald-400"}>{shoeHealth}% Restante</span>
                 </div>
                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                   <div 
-                     className={`h-full ${shoeHealth < 20 ? "bg-red-500" : "bg-blue-400"}`} 
-                     style={{ width: `${Math.max(shoeHealth, 0)}%` }}
-                   />
+                    <div 
+                      className={`h-full ${shoeHealth < 20 ? "bg-red-500" : "bg-blue-400"}`} 
+                      style={{ width: `${Math.max(shoeHealth, 0)}%` }}
+                    />
                 </div>
               </div>
             </>
@@ -137,7 +142,36 @@ export default async function DashboardPage() {
 
       </div>
 
-      {/* SECCIÓN NUEVA: HISTORIAL DE ACTIVIDADES */}
+      {/* SECCIÓN RÉCORDS (La moví aquí afuera para que se vea mejor) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Récord de Distancia */}
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl relative overflow-hidden flex flex-col justify-center">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <TrendingUp size={60} className="text-yellow-500" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Distancia Máx</p>
+                <div className="text-2xl font-black italic text-yellow-400">
+                    {longestRun ? `${longestRun.distance} KM` : '--'}
+                </div>
+                <p className="text-[10px] text-slate-600 mt-1">
+                    {longestRun ? new Date(longestRun.createdAt).toLocaleDateString() : 'Sin datos'}
+                </p>
+            </div>
+
+            {/* Récord de Velocidad */}
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl relative overflow-hidden flex flex-col justify-center">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Zap size={60} className="text-purple-500" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Mejor Ritmo</p>
+                <div className="text-2xl font-black italic text-purple-400">
+                    {fastestRun ? `${fastestRun.pace.toFixed(2)}'` : '--'}
+                </div>
+                <p className="text-[10px] text-slate-600 mt-1">Min / KM</p>
+            </div>
+      </div>
+
+      {/* SECCIÓN INFERIOR: HISTORIAL DE ACTIVIDADES */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
         {/* COLUMNA IZQUIERDA: MENÚ RÁPIDO */}
@@ -154,45 +188,13 @@ export default async function DashboardPage() {
             </Link>
         </div>
       
-        {/* SECCIÓN DE RÉCORDS */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        
-        {/* Récord de Distancia */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-                <TrendingUp size={60} className="text-yellow-500" />
-            </div>
-            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Distancia Máx</p>
-            <div className="text-2xl font-black italic text-yellow-400">
-                {longestRun ? `${longestRun.distance} KM` : '--'}
-            </div>
-            <p className="text-[10px] text-slate-600 mt-1">
-                {longestRun ? new Date(longestRun.createdAt).toLocaleDateString() : 'Sin datos'}
-            </p>
-        </div>
-
-        {/* Récord de Velocidad */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Zap size={60} className="text-purple-500" />
-            </div>
-            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Mejor Ritmo</p>
-            <div className="text-2xl font-black italic text-purple-400">
-                {fastestRun ? `${fastestRun.pace.toFixed(2)}'` : '--'}
-            </div>
-            <p className="text-[10px] text-slate-600 mt-1">Min / KM</p>
-        </div>
-
-      </div>  
-
-        {/* COLUMNA DERECHA: TABLA DE CARRERAS */}
+        {/* COLUMNA DERECHA: TABLA DE CARRERAS (Ocupa 3 columnas) */}
         <div className="lg:col-span-3 bg-slate-900/30 border border-slate-800 rounded-3xl p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <Calendar className="text-emerald-500" size={20}/> Actividad Reciente
             </h3>
 
-            {/* --- INICIO DEL BLOQUE A REEMPLAZAR --- */}
-          <div className="space-y-4">
+            <div className="space-y-4">
             {activities.length === 0 ? (
               <p className="text-slate-500 text-center py-8">Aún no has registrado carreras.</p>
             ) : (
@@ -223,13 +225,16 @@ export default async function DashboardPage() {
                       </div>
                       <div className="hidden md:flex flex-col items-end">
                         <span className="text-[10px] uppercase font-bold text-slate-600">Zapa</span>
-                        <span className="text-emerald-400 text-xs">{activity.shoe.brand} {activity.shoe.model}</span>
+                        {/* AQUÍ ESTABA EL ERROR: AGREGAMOS PROTECCIÓN PARA ZAPAS BORRADAS */}
+                        <span className={`text-xs ${activity.shoe ? 'text-emerald-400' : 'text-slate-600 italic'}`}>
+                            {activity.shoe ? `${activity.shoe.brand} ${activity.shoe.model}` : 'Zapa retirada'}
+                        </span>
                       </div>
                     </div>
 
                     <form action={deleteActivity}>
                         <input type="hidden" name="activityId" value={activity.id} />
-                        <input type="hidden" name="shoeId" value={activity.shoeId} />
+                        <input type="hidden" name="shoeId" value={activity.shoeId || ''} />
                         <input type="hidden" name="distance" value={activity.distance} />
                         
                         <button 
@@ -245,7 +250,6 @@ export default async function DashboardPage() {
               ))
             )}
           </div>
-          {/* --- FIN DEL BLOQUE --- */}
         </div>
 
       </div>

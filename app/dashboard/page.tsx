@@ -146,45 +146,64 @@ export default async function DashboardPage() {
                 <Calendar className="text-emerald-500" size={20}/> Actividad Reciente
             </h3>
 
-            <div className="space-y-4">
-                {activities.length === 0 ? (
-                    <p className="text-slate-500 text-center py-8">Aún no has registrado carreras.</p>
-                ) : (
-                    activities.map((activity) => (
-                        <div key={activity.id} className="flex flex-col md:flex-row justify-between items-center bg-slate-950 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-all">
-                            
-                            {/* Fecha y Datos Principales */}
-                            <div className="flex items-center gap-4 mb-2 md:mb-0 w-full md:w-auto">
-                                <div className="bg-emerald-500/10 p-3 rounded-xl text-emerald-500">
-                                    <Activity size={24} />
-                                </div>
-                                <div>
-                                    <div className="text-lg font-black italic">{activity.distance} KM</div>
-                                    <div className="text-xs text-slate-500 font-mono">
-                                        {new Date(activity.createdAt).toLocaleDateString()}
-                                    </div>
-                                </div>
-                            </div>
+            {/* --- INICIO DEL BLOQUE A REEMPLAZAR --- */}
+          <div className="space-y-4">
+            {activities.length === 0 ? (
+              <p className="text-slate-500 text-center py-8">Aún no has registrado carreras.</p>
+            ) : (
+              activities.map((activity) => (
+                <div key={activity.id} className="flex flex-col md:flex-row justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-all group">
+                  
+                  {/* IZQUIERDA: DATOS */}
+                  <div className="flex items-center gap-4 mb-2 md:mb-0 w-full md:w-auto">
+                    <div className="bg-emerald-500/10 p-3 rounded-xl text-emerald-500">
+                      <Activity size={24} />
+                    </div>
+                    <div>
+                      <div className="text-lg font-black italic">{activity.distance} KM</div>
+                      <div className="text-xs text-slate-500 font-mono">
+                        {new Date(activity.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
 
-                            {/* Detalles Técnicos */}
-                            <div className="flex gap-8 text-sm text-slate-400">
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[10px] uppercase font-bold text-slate-600">Tiempo</span>
-                                    <span className="text-white font-mono">{(activity.duration / 60).toFixed(0)} min</span>
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[10px] uppercase font-bold text-slate-600">Ritmo</span>
-                                    <span className="text-white font-mono">{activity.pace.toFixed(2)}'</span>
-                                </div>
-                                <div className="hidden md:flex flex-col items-end">
-                                    <span className="text-[10px] uppercase font-bold text-slate-600">Zapa</span>
-                                    <span className="text-emerald-400 text-xs">{activity.shoe.brand} {activity.shoe.model}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+                  {/* DERECHA: DETALLES Y BOTÓN DE BORRAR */}
+                  <div className="flex items-center gap-6">
+                    
+                    {/* Detalles Técnicos */}
+                    <div className="flex gap-4 text-sm text-slate-400">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-600">Ritmo</span>
+                        <span className="text-white font-mono">{activity.pace.toFixed(2)}'</span>
+                      </div>
+                      <div className="hidden md:flex flex-col items-end">
+                        <span className="text-[10px] uppercase font-bold text-slate-600">Zapa</span>
+                        <span className="text-emerald-400 text-xs">{activity.shoe.brand} {activity.shoe.model}</span>
+                      </div>
+                    </div>
+
+                    {/* --- AQUÍ ESTÁ EL TACHO DE BASURA --- */}
+                    <form action={deleteActivity}>
+                        <input type="hidden" name="activityId" value={activity.id} />
+                        <input type="hidden" name="shoeId" value={activity.shoeId} />
+                        <input type="hidden" name="distance" value={activity.distance} />
+                        
+                        <button 
+                            type="submit" 
+                            className="bg-slate-800 p-3 rounded-xl text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                            title="Borrar Carrera"
+                        >
+                            <Trash2 size={20} />
+                        </button>
+                    </form>
+                    {/* ------------------------------------ */}
+
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {/* --- FIN DEL BLOQUE --- */}
         </div>
 
       </div>

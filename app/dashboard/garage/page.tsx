@@ -57,8 +57,7 @@ export default async function GaragePage() {
                         type="submit" 
                         className="bg-slate-950/50 p-3 rounded-full text-slate-400 backdrop-blur-sm hover:bg-red-500 hover:text-white transition-all shadow-lg"
                         title="Dar de baja zapatilla"
-                        // Confirmación simple para evitar accidentes en el cel
-                        onClick={(e) => { if(!confirm('¿Seguro que quieres retirar estas zapatillas? Se borrará su historial.')) e.preventDefault() }}
+                        
                       >
                         <Trash2 size={18} />
                       </button>

@@ -22,7 +22,7 @@ export default async function HomePage() {
       </p>
 
       {/* Botón para iniciar sesión con Google */}
-      <Link href="/api/auth/signin/google">
+      <Link href="/api/auth/signin">
         <button className="bg-white text-slate-900 px-8 py-4 rounded-full font-bold text-xl flex items-center gap-3 hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">
           <span className="font-black text-blue-600">G</span> Entrar con Google
         </button>

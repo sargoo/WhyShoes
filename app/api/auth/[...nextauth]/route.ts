@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 
-// 1. Agrega "export" antes de const authOptions
+// IMPORTANTE: Exportamos authOptions para poder usarlo en el Dashboard (Servidor)
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -13,11 +13,11 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt" }, // Usamos JWT para máxima compatibilidad
   callbacks: {
     async session({ session, token }) {
       if (session.user && token.sub) {
-        (session.user as any).id = token.sub;
+        (session.user as any).id = token.sub; // Pasamos el ID al usuario
       }
       return session;
     },

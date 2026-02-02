@@ -19,6 +19,20 @@ export default async function DashboardPage() {
       shoe: true // ¡Truco! Esto trae la marca y modelo del zapato asociado
     }
   });
+  // ... (tus consultas anteriores de shoes y activities) ...
+
+  // 1. Buscar la carrera más larga (Mayor Distancia)
+  const longestRun = await prisma.activity.findFirst({
+    orderBy: { distance: 'desc' }, // Ordenar de mayor a menor
+    take: 1
+  });
+
+  // 2. Buscar la carrera más rápida (Menor Ritmo, pero mayor a 0 para evitar errores)
+  const fastestRun = await prisma.activity.findFirst({
+    where: { pace: { gt: 0 } }, // Pace mayor a 0
+    orderBy: { pace: 'asc' },   // Ordenar de menor a mayor (menos minutos es más rápido)
+    take: 1
+  });
 
   // 3. CÁLCULOS
   const mainShoe = shoes[0]; 
@@ -139,6 +153,37 @@ export default async function DashboardPage() {
                 </button>
             </Link>
         </div>
+      
+        {/* SECCIÓN DE RÉCORDS */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        
+        {/* Récord de Distancia */}
+        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+                <TrendingUp size={60} className="text-yellow-500" />
+            </div>
+            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Distancia Máx</p>
+            <div className="text-2xl font-black italic text-yellow-400">
+                {longestRun ? `${longestRun.distance} KM` : '--'}
+            </div>
+            <p className="text-[10px] text-slate-600 mt-1">
+                {longestRun ? new Date(longestRun.createdAt).toLocaleDateString() : 'Sin datos'}
+            </p>
+        </div>
+
+        {/* Récord de Velocidad */}
+        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Zap size={60} className="text-purple-500" />
+            </div>
+            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Mejor Ritmo</p>
+            <div className="text-2xl font-black italic text-purple-400">
+                {fastestRun ? `${fastestRun.pace.toFixed(2)}'` : '--'}
+            </div>
+            <p className="text-[10px] text-slate-600 mt-1">Min / KM</p>
+        </div>
+
+      </div>  
 
         {/* COLUMNA DERECHA: TABLA DE CARRERAS */}
         <div className="lg:col-span-3 bg-slate-900/30 border border-slate-800 rounded-3xl p-6">
@@ -182,7 +227,6 @@ export default async function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* --- AQUÍ ESTÁ EL TACHO DE BASURA --- */}
                     <form action={deleteActivity}>
                         <input type="hidden" name="activityId" value={activity.id} />
                         <input type="hidden" name="shoeId" value={activity.shoeId} />
@@ -196,8 +240,6 @@ export default async function DashboardPage() {
                             <Trash2 size={20} />
                         </button>
                     </form>
-                    {/* ------------------------------------ */}
-
                   </div>
                 </div>
               ))

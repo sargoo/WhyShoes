@@ -3,8 +3,21 @@ import { Activity, Footprints, TrendingUp, Zap, Calendar, Trash2 } from 'lucide-
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 
+// Imports de Autenticación (Seguridad)
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { redirect } from "next/navigation";
+import UserStatus from "./user-status"; // Importamos el componente cliente
+
 export default async function DashboardPage() {
   
+  // 0. VERIFICACIÓN DE SESIÓN (Protección)
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    redirect("/"); // Si no está logueado, lo manda afuera
+  }
+
   // 1. DATOS DE CABECERA
   const shoes = await prisma.shoe.findMany({
     where: { isActive: true },
@@ -13,6 +26,7 @@ export default async function DashboardPage() {
   
   // 2. DATOS DE ACTIVIDAD
   const activities = await prisma.activity.findMany({
+    where: { userId: (session.user as any).id }, // OPCIONAL: Filtrar por usuario si quieres privacidad total
     orderBy: { createdAt: 'desc' },
     take: 5,
     include: {
@@ -21,15 +35,17 @@ export default async function DashboardPage() {
   });
 
   // 3. DATOS DE RÉCORDS
-  // Buscar la carrera más larga (Mayor Distancia)
   const longestRun = await prisma.activity.findFirst({
+    // where: { userId: (session.user as any).id }, // Descomentar para filtrar por usuario
     orderBy: { distance: 'desc' }, 
     take: 1
   });
 
-  // Buscar la carrera más rápida (Menor Ritmo)
   const fastestRun = await prisma.activity.findFirst({
-    where: { pace: { gt: 0 } }, 
+    where: { 
+        // userId: (session.user as any).id, // Descomentar para filtrar por usuario
+        pace: { gt: 0 } 
+    }, 
     orderBy: { pace: 'asc' },   
     take: 1
   });
@@ -37,12 +53,12 @@ export default async function DashboardPage() {
   // 4. CÁLCULOS
   const mainShoe = shoes[0]; 
   const totalUserDistance = await prisma.activity.aggregate({
+    // where: { userId: (session.user as any).id }, // Descomentar para filtrar por usuario
     _sum: { distance: true }
   });
   
   const kmRecorridos = totalUserDistance._sum.distance || 0;
   
-  // Calculo seguro de salud (evitamos división por cero si maxDistance es raro)
   const shoeHealth = mainShoe && mainShoe.maxDistance > 0
     ? Math.round(100 - (mainShoe.totalDistance / mainShoe.maxDistance * 100)) 
     : 0;
@@ -54,7 +70,7 @@ export default async function DashboardPage() {
     const shoeId = formData.get('shoeId') as string;
     const distance = parseFloat(formData.get('distance') as string);
 
-    // 1. Restar los KM a la zapatilla (Si la zapatilla aun existe)
+    // 1. Restar los KM a la zapatilla
     if (shoeId) {
         const shoe = await prisma.shoe.findUnique({ where: { id: shoeId } });
         if (shoe) {
@@ -81,10 +97,10 @@ export default async function DashboardPage() {
           <h1 className="text-4xl font-black italic tracking-tighter text-emerald-400">WHY_SHOES <span className="text-white not-italic text-lg font-normal ml-4">| Panel de Control</span></h1>
           <p className="text-slate-500 font-mono text-sm mt-2">TU CENTRO DE COMANDO</p>
         </div>
-        <div className="text-right hidden md:block">
-           <div className="text-xs font-bold text-slate-500 uppercase">Usuario</div>
-           <div className="font-bold">Runner Pro</div>
-        </div>
+        
+        {/* Aquí inyectamos el componente de Cliente con el nombre real */}
+        <UserStatus name={session.user?.name} />
+      
       </header>
 
       {/* GRID SUPERIOR (KPIs) */}
@@ -142,7 +158,7 @@ export default async function DashboardPage() {
 
       </div>
 
-      {/* SECCIÓN RÉCORDS (La moví aquí afuera para que se vea mejor) */}
+      {/* SECCIÓN RÉCORDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Récord de Distancia */}
             <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl relative overflow-hidden flex flex-col justify-center">
@@ -188,7 +204,7 @@ export default async function DashboardPage() {
             </Link>
         </div>
       
-        {/* COLUMNA DERECHA: TABLA DE CARRERAS (Ocupa 3 columnas) */}
+        {/* COLUMNA DERECHA: TABLA DE CARRERAS */}
         <div className="lg:col-span-3 bg-slate-900/30 border border-slate-800 rounded-3xl p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <Calendar className="text-emerald-500" size={20}/> Actividad Reciente
@@ -217,7 +233,6 @@ export default async function DashboardPage() {
                   {/* DERECHA: DETALLES Y BOTÓN DE BORRAR */}
                   <div className="flex items-center gap-6">
                     
-                    {/* Detalles Técnicos */}
                     <div className="flex gap-4 text-sm text-slate-400">
                       <div className="flex flex-col items-center">
                         <span className="text-[10px] uppercase font-bold text-slate-600">Ritmo</span>
@@ -225,7 +240,6 @@ export default async function DashboardPage() {
                       </div>
                       <div className="hidden md:flex flex-col items-end">
                         <span className="text-[10px] uppercase font-bold text-slate-600">Zapa</span>
-                        {/* AQUÍ ESTABA EL ERROR: AGREGAMOS PROTECCIÓN PARA ZAPAS BORRADAS */}
                         <span className={`text-xs ${activity.shoe ? 'text-emerald-400' : 'text-slate-600 italic'}`}>
                             {activity.shoe ? `${activity.shoe.brand} ${activity.shoe.model}` : 'Zapa retirada'}
                         </span>

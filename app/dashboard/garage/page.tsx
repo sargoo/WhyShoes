@@ -50,14 +50,20 @@ export default async function GaragePage() {
             <div key={shoe.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl relative group hover:border-emerald-500/50 transition-all">
               
               {/* BOTÓN DE BORRAR (Ahora funciona) */}
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <form action={deleteShoe}>
-                  <input type="hidden" name="shoeId" value={shoe.id} />
-                  <button type="submit" className="text-slate-600 hover:text-red-500 transition-colors p-2" title="Eliminar Zapa">
-                    <Trash2 size={20} />
-                  </button>
-                </form>
-              </div>
+              <div className="absolute top-4 right-4 z-20">
+                    <form action={deleteShoe}>
+                      <input type="hidden" name="shoeId" value={shoe.id} />
+                      <button 
+                        type="submit" 
+                        className="bg-slate-950/50 p-3 rounded-full text-slate-400 backdrop-blur-sm hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                        title="Dar de baja zapatilla"
+                        // Confirmación simple para evitar accidentes en el cel
+                        onClick={(e) => { if(!confirm('¿Seguro que quieres retirar estas zapatillas? Se borrará su historial.')) e.preventDefault() }}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </form>
+                  </div>
               
               <h3 className="text-slate-500 text-xs font-bold uppercase tracking-widest">{shoe.brand}</h3>
               <p className="text-2xl font-black italic">{shoe.model}</p>

@@ -11,12 +11,20 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
+  secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt", // Cambiamos a JWT para que la sesión sea más robusta
+  },
+  pages: {
+    signIn: '/', // Si hay error, que te deje en la home
+  },
   callbacks: {
-    session: async ({ session, user }) => {
-      if (session?.user) {
-        // Aquí usamos "as any" para que TypeScript no se queje y nos deje guardar el ID
-        (session.user as any).id = user.id;
-      }
+    async jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) (session.user as any).id = token.id;
       return session;
     },
   },

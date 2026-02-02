@@ -11,11 +11,21 @@ export default function NewShoePage() {
     const model = formData.get('model') as string;
     const maxDistance = parseFloat(formData.get('maxDistance') as string) || 800;
 
-    // Buscamos un usuario (temporalmente el primero que encontremos para asignarle la zapa)
-    const user = await prisma.user.findFirst();
+    // 1. Buscamos al usuario principal
+    let user = await prisma.user.findFirst();
 
-    if (!user) return; // Si no hay usuario, no hacemos nada (seguridad básica)
+    // 2. ¡AUTO-CORRECCIÓN! 
+    // Si la base de datos está vacía (como ahora en Neon), creamos el usuario automáticamente.
+    if (!user) {
+        user = await prisma.user.create({
+            data: {
+                email: "runner@whyshoes.com", // Email por defecto
+                name: "Runner Pro"
+            }
+        });
+    }
 
+    // 3. Creamos la zapatilla vinculada a ese usuario (viejo o nuevo)
     await prisma.shoe.create({
       data: {
         brand,
